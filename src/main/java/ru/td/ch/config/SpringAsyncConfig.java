@@ -7,18 +7,18 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
 
-/*@Configuration
+@Configuration
 @EnableAsync
 public class SpringAsyncConfig {
 
-    @Bean(name = "threadPoolTaskExecutor")
-    public Executor threadPoolTaskExecutor() {
+	@Bean(name = "threadPoolTaskExecutor")
+	public Executor threadPoolTaskExecutor() {
 
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(20);
-        executor.setMaxPoolSize(1000);
-        executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setThreadNamePrefix("Async-");
-        return executor;
-    }
-}*/
+		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+		executor.setCorePoolSize(20);
+		executor.setMaxPoolSize(1000);
+		executor.setWaitForTasksToCompleteOnShutdown(true);
+		executor.setThreadNamePrefix("Async-");
+		return executor;
+	}
+}

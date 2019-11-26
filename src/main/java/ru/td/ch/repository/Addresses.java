@@ -1,21 +1,15 @@
 package ru.td.ch.repository;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import ru.yandex.clickhouse.ClickHouseConnection;
-import ru.yandex.clickhouse.ClickHouseConnectionImpl;
 import ru.yandex.clickhouse.ClickHouseDataSource;
-import ru.yandex.clickhouse.settings.ClickHouseProperties;
 import ru.yandex.clickhouse.util.ClickHouseRowBinaryStream;
 import ru.yandex.clickhouse.util.ClickHouseStreamCallback;
 
 import java.io.IOException;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
@@ -33,16 +27,53 @@ public class Addresses extends ClickHouseTable{
 
     public Addresses  runTest() throws SQLException {
         CreateTable();
-/*      GenerateStream(1_000_000);
-        GenerateStream(1_000_000);
-        GenerateStream(1_000_000);
-        GenerateStream(1_000_000);
-        GenerateStream(1_000_000);
-        GenerateStream(1_000_000);
-        GenerateStream(1_000_000);
-        GenerateStream(1_000_000);*/
+
 
         return this;
+
+    }
+
+    static class Timer{
+
+        private long time0;
+         static public Timer instance(){
+            return new Timer();
+        }
+
+        public  Timer start(){
+            time0 = System.nanoTime();
+            return this;
+        }
+        public  void end(){
+            long time1 = System.nanoTime();
+
+            Long mSec = (time1 - time0)/1_000_000;
+            System.out.println("Time= " + mSec/1_000 +"," + mSec % 1_000 +" seconds");
+        }
+
+    }
+
+    public static void doLoadData() throws SQLException {
+        System.out.println("Context Start Event received.");
+
+
+        Addresses a = new Addresses().setUp().runTest();
+        //Addresses a = BeanUtil.getBean(Addresses.class).setUp().runTest();
+
+        Timer t = Timer.instance().start();
+
+
+        CompletableFuture< Long > f1 = a.GenerateLoadStream(10_000_000);
+        //CompletableFuture< Long > f2 = a.GenerateLoadStream(50_000_000);
+        //CompletableFuture< Long > f3 = a.GenerateLoadStream(4_000_000);
+
+        //CompletableFuture.allOf(f1, f2, f3).join();
+        //CompletableFuture.allOf(f1, f2).join();
+        CompletableFuture.allOf(f1).join();
+        System.out.println("=================================");
+        System.out.println("ВСЕ ОТПРАВЛЕНО");
+
+        t.end();
 
     }
 
@@ -101,11 +132,11 @@ public class Addresses extends ClickHouseTable{
     private String SQLTableCreate = "CREATE TABLE Addresses\n" +
             "(\n" +
             "    ID UInt64,\n" +
-            "    Country String,\n" +
-            "    Region String,\n" +
-            "    District String,\n" +
-            "    Street String,\n" +
-            "    Building String,\n" +
+            "    Country String ,\n" +
+            "    Region String ,\n" +
+            "    District String ,\n" +
+            "    Street String ,\n" +
+            "    Building String ,\n" +
             "    Room Int32,\n" +
             "    \n" +
             "    Sign Int8\n" +
@@ -132,7 +163,7 @@ public class Addresses extends ClickHouseTable{
     }
 
     @Async("threadPoolTaskExecutor")
-     public CompletableFuture< Long > GenerateStream(long lines) throws SQLException {
+     public CompletableFuture< Long > GenerateLoadStream(long lines) throws SQLException {
 
         final long count = lines;
         final AtomicLong sum = new AtomicLong();
@@ -142,7 +173,7 @@ public class Addresses extends ClickHouseTable{
                 new ClickHouseStreamCallback() {
                     @Override
                     public void writeTo(ClickHouseRowBinaryStream stream) throws IOException {
-                        for (int i = 0; i < count; i++) {
+                        for (int i = 0; i <= count; i++) {
                             stream.writeInt64(i);
                             stream.writeString("Country_" + i);
                             stream.writeString("Region_" + i);
@@ -166,55 +197,11 @@ public class Addresses extends ClickHouseTable{
         return CompletableFuture.completedFuture(0L);
         //ResultSet rs = connection.createStatement().executeQuery("SELECT count() AS cnt, sum(Room) AS sum FROM Addresses");
 
-/*        Assert.assertTrue(rs.next());
-        assertEquals(rs.getInt("cnt"), count);
-        assertEquals(rs.getLong("sum"), sum.get());*/
+
 
 
     }
 
 
 }
-/*
-- "1" name="country" displayName="Страна" 
-  name_short 
-  
-- "regions" mask="" "2" name="region" displayName="Регион" 
-  name 
-  
-- "districts" mask="" "3" name="district_ref" displayName="Район_спр" 
-  name 
-  
-- "cities" mask="" "4" name="city_ref" displayName="Город_спр" 
-  name 
-  
-  "villages_council" mask="" "5" name="village_council_ref" displayName="Сельское образование (с/с)_спр"  
-  "adm_districts" mask="" "6" name="adm_district_ref" displayName="Административный округ_спр"  
-  "settlements" mask="" "7" name="locality_ref" displayName="Населенный пункт_спр"  
-  "city_districts" mask="" "8" name="city_district_ref" displayName="Район города_спр"  
-  "" mask="" "9" simpleDataType="String" name="microdistrict" displayName="Микрорайон"  
-  "militaries" mask="" "10" name="military" displayName="Воинская часть"  
-  "streets" mask="" "11" name="street_ref" displayName="Улица_спр"  
-  "String" name="house" displayName="Дом"  
-  "String" name="case" displayName="Корпус"  
-  "String" name="build" displayName="Строение"  
-  "String" name="litera" displayName="Литера"  
-  "String" name="room" displayName="Помещение"  
-  able="true" displayable="true" mainDisplayable="true" name="addr_string" displayName="Адрес одной строкой"  
-  "String" name="fias" displayName="Код ФИАС"  
-  "String" name="district" displayName="Район"  
-  "String" name="city" displayName="Город"  
-  "String" name="village_council" displayName="Сельское образование (с/с)"  
-  _ref" displayName="ЗАТО_спр"  
-  "String" name="zato" displayName="ЗАТО (поселок городского типа)"  
-  "String" name="adm_district" displayName="Административный округ"  
-  "String" name="locality" displayName="Населённый пункт"  
-  "String" name="city_district" displayName="Район города"  
-  "String" name="street" displayName="Улица"  
-  <arrayAttribute useAttributeNameForDisplay="false" arrayValueType="String" searchable="true" nullable="true" searchMorphologically="false" searchCaseInsensitive="false" lookupEntityType="" mask="" exchangeSeparator="|" "17" name="flats" displayName="Номера квартир"  
-  <complexAttribute nestedEntityName="coordinates" minCount="0" subEntityKeyAttribute="" "20" name="coordinates" displayName="Координаты"  
-  </entity>
 
-
-
-*/
