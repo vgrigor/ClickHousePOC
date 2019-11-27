@@ -21,6 +21,13 @@
 
 	<dependencies>
 
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-jmx</artifactId>
+			<version>1.2.1</version>
+		</dependency>
+
+
 		<!--NATIVE ClickHouse JDBC-->
 		<dependency>
 			<groupId>com.github.housepower</groupId>

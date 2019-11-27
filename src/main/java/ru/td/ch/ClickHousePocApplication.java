@@ -6,12 +6,12 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.EnableAsync;
-import ru.td.ch.config.BeanUtil;
+import ru.td.ch.metering.Meter;
 import ru.td.ch.repository.Addresses;
+import ru.td.ch.util.Application;
 
 import javax.annotation.PostConstruct;
 import java.sql.SQLException;
-import java.util.concurrent.CompletableFuture;
 
 @EnableAsync
 @SpringBootApplication
@@ -21,7 +21,10 @@ public class ClickHousePocApplication {
 	public static void main(String[] args) throws Exception {
 		SpringApplication.run(ClickHousePocApplication.class, args);
 
-		Addresses.doLoadData();
+		Meter.addTestMeter();
+		Application.waitInfinitely();
+
+		//Addresses.doLoadData();
 
 	}
 

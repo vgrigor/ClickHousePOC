@@ -63,7 +63,7 @@ public class Addresses extends ClickHouseTable{
         Timer t = Timer.instance().start();
 
 
-        CompletableFuture< Long > f1 = a.GenerateLoadStream(10_000_000);
+        CompletableFuture< Long > f1 = a.GenerateLoadStream(100_000_000);
         //CompletableFuture< Long > f2 = a.GenerateLoadStream(50_000_000);
         //CompletableFuture< Long > f3 = a.GenerateLoadStream(4_000_000);
 

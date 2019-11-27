@@ -1,4 +1,4 @@
-package ru.td.ch.config;
+package ru.td.ch.config.spring;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
