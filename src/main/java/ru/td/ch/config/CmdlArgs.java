@@ -28,20 +28,11 @@ public class CmdlArgs {
             help = true)
     private String engine = "default";
 
-
-    @Parameter(names = {"-v", "--verbose"},
-            required = false,
-            description = "Enable verbose logging")
-    private boolean verbose;
-    @Parameter(names = {"-f", "--file"},
-            description = "Path and name of file to use",
-            required = false)
-    private String file;
-    @Parameter(names = {"-h", "--help"},
-            description = "Help/Usage",
+    @Parameter(names = {"-rip", "--useRealIp"},
+            description = "useRealIp unstead of localhost",
             required = false,
             help = true)
-    private boolean help;
+    private boolean useRealIp = false;
 
 
 
@@ -81,5 +72,9 @@ public class CmdlArgs {
 
     public String getEngine() {
         return engine;
+    }
+
+    public boolean isUseRealIp() {
+        return useRealIp;
     }
 }

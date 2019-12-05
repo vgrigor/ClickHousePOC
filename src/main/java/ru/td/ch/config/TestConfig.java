@@ -1,7 +1,7 @@
 package ru.td.ch.config;
 
 /**
- * System o test managment
+ * System  test managment = "FRAMEWORK" must be, in best future
  *
  * Contains all test pass configs
  */

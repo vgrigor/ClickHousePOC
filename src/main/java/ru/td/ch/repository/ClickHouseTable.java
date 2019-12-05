@@ -1,5 +1,6 @@
 package ru.td.ch.repository;
 
+import ru.td.ch.config.CmdlArgs;
 import ru.yandex.clickhouse.ClickHouseConnection;
 import ru.yandex.clickhouse.ClickHouseConnectionImpl;
 import ru.yandex.clickhouse.ClickHouseDataSource;
@@ -7,29 +8,24 @@ import ru.yandex.clickhouse.ClickHouseDataSource;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class ClickHouseTable {
 
-    //static String jdbcURL = "jdbc:clickhouse://localhost:8123";
-    static String ip = "localhost";
     static String jdbcURL = "jdbc:clickhouse://" + getIP() +":8123";
+
     ClickHouseDataSource dataSource = new ClickHouseDataSource( jdbcURL);
-
-    //private ClickHouseDataSource dataSource;
     protected ClickHouseConnection connection;
-
-
-    public void ClickHouseTable() throws UnknownHostException {
-
-    }
 
     static public String getIP()  {
         InetAddress inetAddress = null;
         String IP = "localhost";
 
+        boolean  isUseRealIp  = CmdlArgs.instance.isUseRealIp();
+
         //For some servers works only by real IP, but it was bad servers - not used this days
-        if(false)
+        if(isUseRealIp)
         try {
             inetAddress = InetAddress.getLocalHost();
             IP = inetAddress.getHostAddress();
@@ -84,5 +80,11 @@ public class ClickHouseTable {
         }
         finally {
         }
+    }
+
+    public ResultSet ExecuteAndReturnResult(String SQL) throws SQLException {
+        ResultSet rs = connection.createStatement().executeQuery(SQL);
+
+        return rs;
     }
 }

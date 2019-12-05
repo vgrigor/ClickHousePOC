@@ -7,7 +7,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import ru.td.ch.util.Application;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -17,27 +16,21 @@ public class Meter {
 
     public static void addTimerMeter(String meterName){
 
-        Timer timer = Metrics.timer(meterName);
-/*        SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        Metrics.addRegistry(registry);*/
-
-
-
-        //timer.record(3000, MILLISECONDS);
-
-    }
-    public static void addTimerMeterValue(String meterName, long milliseconds){
-
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
         Metrics.addRegistry(registry);
 
         Timer timer = Metrics.timer(meterName);
+    }
+    public static void addTimerMeterValue(String meterName, long milliseconds){
+
+       Timer timer = Metrics.timer(meterName);
 
         timer.record(milliseconds, MILLISECONDS);
     }
 
-
-
+    /**
+     * Still developing - it's experiment
+     */
     public static void addTestMeter(){
 
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
@@ -52,7 +45,6 @@ public class Meter {
         distributionSummary1.record(30);
         distributionSummary1.record(40);
         distributionSummary1.record(50);
-
 
 
         distributionSummary.record(3);
@@ -82,11 +74,9 @@ public class Meter {
         }
         Metrics.addRegistry(new SimpleMeterRegistry());
 
-        //Metrics.counter("objects.instance").increment();
         new CountedObject();
 
     }
-
 
     public static void main(String[] args) {
         addTestMeter();

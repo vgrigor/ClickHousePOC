@@ -1,80 +1,37 @@
 package ru.td.ch.repository;
 
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
 import ru.td.ch.config.CmdlArgs;
 import ru.td.ch.metering.Meter;
-import ru.yandex.clickhouse.ClickHouseConnection;
-import ru.yandex.clickhouse.ClickHouseDataSource;
+import ru.td.ch.util.Timer;
 import ru.yandex.clickhouse.util.ClickHouseRowBinaryStream;
 import ru.yandex.clickhouse.util.ClickHouseStreamCallback;
 
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicLong;
 
-@Service
+
 public class Addresses extends ClickHouseTable{
-
 
     public Addresses setUp() throws SQLException {
 
         connection = GetConnection();
-        return this;
-    }
-
-    public Addresses  runTest() throws SQLException {
         CreateTable();
-
-
         return this;
-
-    }
-
-    static class Timer{
-
-        private long time0;
-         static public Timer instance(){
-            return new Timer();
-        }
-
-        public  Timer start(){
-            time0 = System.nanoTime();
-            return this;
-        }
-
-        /**
-         *
-         * @return   Milliseconds
-         */
-        public  long end(){
-            long time1 = System.nanoTime();
-
-            Long mSec = (time1 - time0)/1_000_000;
-            time0 = System.nanoTime();
-            System.out.println("Time= " + mSec/1_000 +"," + mSec % 1_000 +" seconds");
-            return mSec;
-        }
-
     }
 
     public static void doLoadData() throws SQLException {
-        System.out.println("Context Start Event received.");
+        long dataSize = CmdlArgs.instance.getDataSize();
 
-        long dataSize = CmdlArgs.instance.getDataSize();//1_000_000;
-
-        Addresses a = new Addresses().setUp().runTest();
-        //Addresses a = BeanUtil.getBean(Addresses.class).setUp().runTest();
+        Addresses a = new Addresses().setUp();
 
         a.createChLoadMeter();
 
         Timer t = Timer.instance().start();
         int threads = CmdlArgs.instance.getThreads();
         if(threads == 1) {
-            CompletableFuture<Long> f1 = a.GenerateLoadStream(dataSize,0);
-            CompletableFuture.allOf(f1).join();
+            a.GenerateLoadStream(dataSize,0);
+
         }
         else {
 
@@ -83,7 +40,7 @@ public class Addresses extends ClickHouseTable{
             for(int i= 0; i < threads; i++){
 
                 CompletableFuture fi =
-                CompletableFuture.runAsync( new I(a,i)  );
+                CompletableFuture.runAsync( new ThreadedRunner(a,i)  );
 
                 features1[i] = fi;
             }
@@ -97,8 +54,8 @@ public class Addresses extends ClickHouseTable{
 
     }
 
-    static class I implements  Runnable{
-        public I(Addresses a, int i){
+    static class ThreadedRunner implements  Runnable{
+        public ThreadedRunner(Addresses a, int i){
             this.i = i;
             this.a = a;
         }
@@ -142,7 +99,7 @@ public class Addresses extends ClickHouseTable{
                 "    \n" +
                 "    Sign Int8\n" +
                 ")\n" +
-                "ENGINE = StripeLog\n";  //NOT CHECKED - may be ERROR
+                "ENGINE = StripeLog\n";
     }
 
 
@@ -212,8 +169,6 @@ public class Addresses extends ClickHouseTable{
             case "stripedlog"   : SQLTableCreate = StripedLog.SQLTableCreate;   break;
         }
 
-
-        //executeSingleSQL(SQLTableCreate);
         executeSQL(SQLTableCreate);
     }
 
@@ -228,6 +183,7 @@ public class Addresses extends ClickHouseTable{
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new RuntimeException(e);
         }
 
         return 0;
@@ -237,18 +193,15 @@ public class Addresses extends ClickHouseTable{
         Meter.addTimerMeter("ClickHouse: Load 1_000_000 records");
     }
 
-    @Async("threadPoolTaskExecutor")
-     public CompletableFuture< Long > GenerateLoadStream(long lines, int threadNumber) throws SQLException {
+     public void  GenerateLoadStream(long lines, int threadNumber) throws SQLException {
 
         final long count = lines;
-        final AtomicLong sum = new AtomicLong();
 
         connection.createStatement().sendRowBinaryStream(
                 "INSERT INTO Addresses (ID,Country,Region,District,Street,Building,Room,Sign)",
                 new ClickHouseStreamCallback() {
                     @Override
                     public void writeTo(ClickHouseRowBinaryStream stream) throws IOException {
-
 
                         Timer t = Timer.instance().start();
 
@@ -262,11 +215,10 @@ public class Addresses extends ClickHouseTable{
 
                             stream.writeInt32(i % 10);
                             stream.writeInt8(1);
-                            //sum.addAndGet(i);
+
 
                             if(i %1_000_000 == 0){
                                 System.out.println("Added:" + i + " thread: " + Thread.currentThread().getName());
-
 
                                 System.out.println("threadNumber: " + threadNumber);
 
@@ -278,12 +230,6 @@ public class Addresses extends ClickHouseTable{
                 }
 
         );
-
-        return CompletableFuture.completedFuture(0L);
-        //ResultSet rs = connection.createStatement().executeQuery("SELECT count() AS cnt, sum(Room) AS sum FROM Addresses");
-
-
-
 
     }
 
