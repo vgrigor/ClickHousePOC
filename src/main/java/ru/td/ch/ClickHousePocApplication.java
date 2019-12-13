@@ -12,6 +12,8 @@ import ru.td.ch.config.CmdlArgs;
 import ru.td.ch.config.spring.YAMLConfig;
 import ru.td.ch.metering.Meter;
 import ru.td.ch.repository.Addresses;
+import ru.td.ch.repository.AddressesFK;
+import ru.td.ch.repository.dictionary.AddressRegion;
 import ru.td.ch.util.Application;
 
 import javax.annotation.PostConstruct;
@@ -25,7 +27,9 @@ public class ClickHousePocApplication {
 	private YAMLConfig myConfig;
 
 	public static void main(String[] args) throws Exception {
+
 		CmdlArgs.setup(args);
+
 		SpringApplication.run(ClickHousePocApplication.class, args);
 
 	}
@@ -34,7 +38,23 @@ public class ClickHousePocApplication {
 	void init() throws Exception {
 		myConfig.run(myConfig);
 
+
+
+	switch (CmdlArgs.instance.getTable()){
+		case "AddressRegion":	AddressRegion.doLoadData();  break;
+		case "Addresses"	:	Addresses.doLoadData();  	break;
+		case "AddressesFK"	:	AddressesFK.doLoadData();  	break;
+
+		default: System.out.println("Table not specified , LOAD will not called");
+	}
+
+/*
+		if(CmdlArgs.instance.isJoin())
+			AddressRegion.doLoadData();
+
+		if(false)
 		Addresses.doLoadData();
+*/
 	}
 
 }

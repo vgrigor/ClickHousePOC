@@ -71,7 +71,7 @@ public class AddressesFK extends ClickHouseTable{
 
 
     static class TinyLog{
-        public static  String SQLTableCreate = "CREATE TABLE Addresses\n" +
+        public static  String SQLTableCreate = "CREATE TABLE AddressesFK\n" +
                 "(\n" +
                 "    ID UInt64,\n" +
                 "    FkRegion UInt64,\n" +
@@ -88,7 +88,7 @@ public class AddressesFK extends ClickHouseTable{
     }
 
     static class StripedLog{
-        public static  String SQLTableCreate = "CREATE TABLE Addresses\n" +
+        public static  String SQLTableCreate = "CREATE TABLE AddressesFK\n" +
                 "(\n" +
                 "    ID UInt64,\n" +
                 "    FkRegion UInt64,\n" +
@@ -106,7 +106,7 @@ public class AddressesFK extends ClickHouseTable{
 
 
     static class MergeTree{
-        public static String SQLTableCreate = "CREATE TABLE Addresses\n" +
+        public static String SQLTableCreate = "CREATE TABLE AddressesFK\n" +
                 "(\n" +
                 "    ID UInt64,\n" +
                 "    FkRegion UInt64,\n" +
@@ -124,7 +124,7 @@ public class AddressesFK extends ClickHouseTable{
     }
 
     static class Memory{
-        public static String SQLTableCreate = "CREATE TABLE Addresses\n" +
+        public static String SQLTableCreate = "CREATE TABLE AddressesFK\n" +
                 "(\n" +
                 "    ID UInt64,\n" +
                 "    FkRegion UInt64,\n" +
@@ -141,7 +141,7 @@ public class AddressesFK extends ClickHouseTable{
     }
 
 
-    private String SQLTableCreate = "CREATE TABLE Addresses\n" +
+    private String SQLTableCreate = "CREATE TABLE AddressesFK\n" +
             "(\n" +
             "    ID UInt64,\n" +
             "    FkRegion UInt64,\n" +
@@ -203,7 +203,7 @@ public class AddressesFK extends ClickHouseTable{
         final long count = lines;
 
         connection.createStatement().sendRowBinaryStream(
-                "INSERT INTO Addresses (ID,Country,Region,District,Street,Building,Room,Sign)",
+                "INSERT INTO AddressesFK (ID, FkRegion,Country,Region,District,Street,Building,Room,Sign)",
                 new ClickHouseStreamCallback() {
                     @Override
                     public void writeTo(ClickHouseRowBinaryStream stream) throws IOException {
@@ -212,7 +212,7 @@ public class AddressesFK extends ClickHouseTable{
 
                         for (int i = 0; i <= count; i++) {
                             stream.writeInt64(i + threadNumber*count);
-                            stream.writeInt64(i + threadNumber*count % 10_000);
+                            stream.writeInt64((i + threadNumber*count) % 100_000);
                             stream.writeString("Country_" + i);
                             stream.writeString("Region_" + i);
                             stream.writeString("District_" + i);

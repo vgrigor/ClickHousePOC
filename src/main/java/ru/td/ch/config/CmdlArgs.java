@@ -10,7 +10,14 @@ public class CmdlArgs {
 
     public static CmdlArgs instance;
 
-    @Parameter(names = {"-t", "--threads"},
+
+    @Parameter(names = {"-j", "--JOIN"},
+            required = false,
+            description = "generate JOIN table, not fill",
+            help = true)
+    private boolean join = false;
+
+    @Parameter(names = {"-th", "--threads"},
             required = false,
             description = "Load data threads",
             help = true)
@@ -33,6 +40,19 @@ public class CmdlArgs {
             required = false,
             help = true)
     private boolean useRealIp = false;
+
+
+    @Parameter(names = {"-ip", "--useIP"},
+            description = "other computer instead of localhost",
+            required = false,
+            help = true)
+    private String IP = "localhost";
+
+    @Parameter(names = {"-t", "--table"},
+            description = "load table",
+            required = false,
+            help = true)
+    private String table = "";//"Addresses";
 
 
 
@@ -76,5 +96,17 @@ public class CmdlArgs {
 
     public boolean isUseRealIp() {
         return useRealIp;
+    }
+
+    public boolean isJoin() {
+        return join;
+    }
+
+    public String getIP() {
+        return IP;
+    }
+
+    public String getTable() {
+        return table;
     }
 }

@@ -1,7 +1,9 @@
 package ru.td.ch.repository.dictionary;
 
 
+import ru.td.ch.config.CmdlArgs;
 import ru.td.ch.metering.Meter;
+import ru.td.ch.repository.Addresses;
 import ru.td.ch.repository.ClickHouseTable;
 import ru.td.ch.util.Timer;
 import ru.yandex.clickhouse.util.ClickHouseRowBinaryStream;
@@ -9,9 +11,28 @@ import ru.yandex.clickhouse.util.ClickHouseStreamCallback;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.concurrent.CompletableFuture;
 
 public class AddressRegion extends ClickHouseTable {
 
+
+    public static void doLoadData() throws SQLException {
+        long dataSize = CmdlArgs.instance.getDataSize();
+
+        AddressRegion a = new AddressRegion().setUp();
+        a.CreateTable();
+
+        Timer t = Timer.instance().start();
+
+            a.GenerateLoadStream(dataSize,0);
+
+
+        System.out.println("=================================");
+        System.out.println("ВСЕ ОТПРАВЛЕНО" + "\tThreads: " + 1 + "\tDataSize:"+dataSize);
+
+        t.end();
+
+    }
 
     static class Memory{
         public static String SQLTableCreate = "CREATE TABLE AddressRegion\n" +
@@ -50,7 +71,7 @@ public class AddressRegion extends ClickHouseTable {
 
                         for (int i = 0; i <= count; i++) {
                             stream.writeInt64(i + threadNumber*count);
-                            stream.writeInt64(i + threadNumber*count % 10_000);
+                            //stream.writeInt64(i + threadNumber*count % 10_000);
                             stream.writeString("Country_" + i);
                             stream.writeString("Region_" + i);
                             stream.writeString("District_" + i);

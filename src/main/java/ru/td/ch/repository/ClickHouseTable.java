@@ -20,7 +20,7 @@ public class ClickHouseTable {
 
     static public String getIP()  {
         InetAddress inetAddress = null;
-        String IP = "localhost";
+        String IP = CmdlArgs.instance.getIP();
 
         boolean  isUseRealIp  = CmdlArgs.instance.isUseRealIp();
 
