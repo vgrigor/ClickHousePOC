@@ -82,6 +82,20 @@ public class ClickHouseTable {
         }
     }
 
+    /**
+     *         ResultSet rs = connection.createStatement().executeQuery(
+     *                 "SELECT count() AS cnt, sum(value) AS sum, uniqExact(string_value) uniq FROM test.tsv_stream");
+     *         Assert.assertTrue(rs.next());
+     *         Assert.assertEquals(rs.getInt("cnt"), 2);
+     *         Assert.assertEquals(rs.getLong("sum"), 6);
+     *         Assert.assertEquals(rs.getLong("uniq"), 1);
+     *
+     *
+     *
+     * @param SQL
+     * @return
+     * @throws SQLException
+     */
     public ResultSet ExecuteAndReturnResult(String SQL) throws SQLException {
         ResultSet rs = connection.createStatement().executeQuery(SQL);
 

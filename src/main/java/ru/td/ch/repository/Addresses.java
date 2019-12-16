@@ -2,21 +2,29 @@ package ru.td.ch.repository;
 
 import ru.td.ch.config.CmdlArgs;
 import ru.td.ch.metering.Meter;
+import ru.td.ch.util.Application;
 import ru.td.ch.util.Timer;
 import ru.yandex.clickhouse.util.ClickHouseRowBinaryStream;
 import ru.yandex.clickhouse.util.ClickHouseStreamCallback;
 
 import java.io.IOException;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 
 
 public class Addresses extends ClickHouseTable{
 
+    static boolean isUpdate = false;
+    static boolean isDelete = false;
+
     public Addresses setUp() throws SQLException {
 
         connection = GetConnection();
-        CreateTable();
+
+        if(CmdlArgs.instance.isDelete() == false)
+            CreateTable();
+
         return this;
     }
 
@@ -29,22 +37,54 @@ public class Addresses extends ClickHouseTable{
 
         Timer t = Timer.instance().start();
         int threads = CmdlArgs.instance.getThreads();
-        if(threads == 1) {
+
+        isUpdate = CmdlArgs.instance.isUpdate();
+        isDelete = CmdlArgs.instance.isDelete();
+
+
+        if(threads == 0) { //ONLY TEST - without threads
             a.GenerateLoadStream(dataSize,0);
-
         }
-        else {
+        else
+            {
 
-            CompletableFuture[] features1 = new CompletableFuture[threads];
+            CompletableFuture[] features = new CompletableFuture[threads];
 
-            for(int i= 0; i < threads; i++){
 
-                CompletableFuture fi =
-                CompletableFuture.runAsync( new ThreadedRunner(a,i)  );
+                // LOAD
+                if( isUpdate == false && isDelete == false) {
 
-                features1[i] = fi;
-            }
-            CompletableFuture.allOf(features1).join();
+                    runAndWait(threads, a, LoadThreadedRunner.class);
+                }
+                // DELETE
+                else
+                if( isUpdate == false  && isDelete == true) {
+
+                    runAndWait(threads, a, DeleteThreadedRunner.class);
+
+                    a.doOptimize();
+                }
+                // UPDATE
+                else
+                if( isUpdate == true &&  isDelete == false) {
+
+                    runAndWait(threads, a, LoadThreadedRunner.class);
+
+                    // 1. DELETE
+                    runAndWait(threads, a, DeleteThreadedRunner.class);
+
+                    // 2. OPTIMIZE - Collapse
+                    a.doOptimize();
+                    Application.wait(1000);
+
+                    // 3. INSERT again
+                    runAndWait(threads, a, LoadThreadedRunner.class);
+
+                    }
+                else{
+                    throw new RuntimeException("isUpdate == true &&  isDelete == true : can not be");
+
+                }
 
         }
         System.out.println("=================================");
@@ -54,21 +94,106 @@ public class Addresses extends ClickHouseTable{
 
     }
 
-    class Updater{
+    static void runAndWait(int nThreads, Addresses a, Class c){
 
+
+        CompletableFuture[] features1 = new CompletableFuture[nThreads];
+        for(int i= 0; i < nThreads; i++) {
+            ThreadedRunner runner = createInstance(c, a, nThreads);
+            CompletableFuture fi =
+                    CompletableFuture.runAsync( runner);
+            features1[i] = fi;
+        }
+        CompletableFuture.allOf(features1).join();
     }
 
+    static ThreadedRunner createInstance(Class c, Addresses a, int threadNumber){
+        ThreadedRunner threadedRunner;
+        try {
+            threadedRunner = (ThreadedRunner)c.getConstructor(Addresses.class, Integer.class).newInstance(a,  threadNumber);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+        return threadedRunner;
+    }
+
+    /**
+     * Collapse all records wich have different sign
+     *
+     * @throws SQLException
+     */
+    void doOptimize( ) throws SQLException {
+
+        this.connection.createStatement().execute("OPTIMIZE TABLE " + "Addresses");
+
+        String SqlCount = "SELECT Count( * ) AS count from Addresses ";
+
+        ResultSet rs = ExecuteAndReturnResult( SqlCount );
+        if(rs.next() == false)
+            System.out.println("No Values from SQL:" + SqlCount);
+        else
+            System.out.println("Count after OPTIMIZE: " + rs.getInt("count") );
+    }
+
+
     static class ThreadedRunner implements  Runnable{
-        public ThreadedRunner(Addresses a, int i){
-            this.i = i;
+        public ThreadedRunner(){};
+
+        public ThreadedRunner(Addresses a, Integer threadNumber){
+            this.threadNumber = threadNumber;
             this.a = a;
         }
-        public int i = 0;
+        public int threadNumber = 0;
         Addresses a;
 
         @Override
         public void run() {
-            a.GenerateLoadStream(i);
+            a.GenerateLoadStream(threadNumber);
+        }
+    }
+
+    static class LoadThreadedRunner extends ThreadedRunner{
+        public LoadThreadedRunner(Addresses a, Integer threadNumber){
+            this.threadNumber = threadNumber;
+            this.a = a;
+        }
+        public int threadNumber = 0;
+        Addresses a;
+
+        @Override
+        public void run() {
+            a.GenerateLoadStream(threadNumber);
+        }
+    }
+
+    static class UpdateThreadedRunner extends ThreadedRunner{
+        public UpdateThreadedRunner(Addresses a, Integer threadNumber){
+            this.threadNumber = threadNumber;
+            this.a = a;
+        }
+        public int threadNumber = 0;
+        Addresses a;
+
+        @Override
+        public void run() {
+            a.GenerateLoadStream(threadNumber);
+        }
+    }
+
+    static class DeleteThreadedRunner extends ThreadedRunner{
+        public DeleteThreadedRunner(Addresses a, Integer threadNumber){
+            this.threadNumber = threadNumber;
+            this.a = a;
+        }
+        public int threadNumber = 0;
+        Addresses a;
+
+        @Override
+        public void run() {
+            a.GenerateDeleteStream(threadNumber);
+            //a.GenerateLoadStream(threadNumber);
         }
     }
 
@@ -193,11 +318,27 @@ public class Addresses extends ClickHouseTable{
         return 0;
     }
 
+    public long GenerateDeleteStream(int threadNumber){
+        try {
+            GenerateLoadStream(CmdlArgs.instance.getDataSize()/ CmdlArgs.instance.getThreads(), threadNumber, true, false);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+
+        return 0;
+    }
+
     void createChLoadMeter(){
         Meter.addTimerMeter("ClickHouse: Load 1_000_000 records");
     }
 
-     public void  GenerateLoadStream(long lines, int threadNumber) throws SQLException {
+    public void  GenerateLoadStream(long lines, int threadNumber) throws SQLException {
+        GenerateLoadStream(lines, threadNumber, Addresses.isDelete, Addresses.isUpdate);
+    }
+
+     public void  GenerateLoadStream(long lines, int threadNumber, boolean isDelete, boolean isUpdate) throws SQLException {
 
         final long count = lines;
 
@@ -218,8 +359,11 @@ public class Addresses extends ClickHouseTable{
                             stream.writeString("Room_" + i);
 
                             stream.writeInt32(i % 10);
-                            stream.writeInt8(1);
 
+                            if(isDelete == false)
+                                stream.writeInt8(1);
+                            else
+                                stream.writeInt8(-1);
 
                             if(i %1_000_000 == 0){
                                 System.out.println("Added:" + i + " thread: " + Thread.currentThread().getName());

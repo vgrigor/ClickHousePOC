@@ -55,6 +55,19 @@ public class CmdlArgs {
     private String table = "";//"Addresses";
 
 
+    @Parameter(names = {"-u", "--update"},
+            description = "update table Addreses",
+            required = false,
+            help = true)
+    private boolean update = false;//"Addresses";
+
+    @Parameter(names = {"-d", "--delete"},
+            description = "delete from table Addreses",
+            required = false,
+            help = true)
+    private boolean delete = false;//"Addresses";
+
+
 
     public static CmdlArgs setup(String[] args) {
 
@@ -108,5 +121,13 @@ public class CmdlArgs {
 
     public String getTable() {
         return table;
+    }
+
+    public boolean isUpdate() {
+        return update;
+    }
+
+    public boolean isDelete() {
+        return delete;
     }
 }

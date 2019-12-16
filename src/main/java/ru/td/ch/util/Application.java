@@ -12,4 +12,13 @@ public class Application {
             }
         }
     }
+
+    public static void wait(int mSec){
+            try {
+                sleep(mSec);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+    }
 }
