@@ -54,6 +54,10 @@ public class Addresses extends ClickHouseTable{
 
     }
 
+    class Updater{
+
+    }
+
     static class ThreadedRunner implements  Runnable{
         public ThreadedRunner(Addresses a, int i){
             this.i = i;
