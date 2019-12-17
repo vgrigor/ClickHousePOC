@@ -36,6 +36,7 @@ public class Addresses extends ClickHouseTable{
         a.createChLoadMeter();
 
         Timer t = Timer.instance().start();
+        Timer tWhole = Timer.instance().start();
         int threads = CmdlArgs.instance.getThreads();
 
         isUpdate = CmdlArgs.instance.isUpdate();
@@ -55,30 +56,52 @@ public class Addresses extends ClickHouseTable{
                 if( isUpdate == false && isDelete == false) {
 
                     runAndWait(threads, a, LoadThreadedRunner.class);
+
+                    t.end("LoadThreadedRunner");
                 }
                 // DELETE
                 else
                 if( isUpdate == false  && isDelete == true) {
 
+                        //a.printStep("DeleteThreadedRunner");
                     runAndWait(threads, a, DeleteThreadedRunner.class);
 
+                    t.end("DeleteThreadedRunner");
+                    //Application.wait(1000);
+
                     a.doOptimize();
+
+                    t.end("doOptimize");
                 }
                 // UPDATE
                 else
                 if( isUpdate == true &&  isDelete == false) {
 
+                        //a.printStep("LoadThreadedRunner");
+                    a.printSelectCount("Addresses");
                     runAndWait(threads, a, LoadThreadedRunner.class);
 
+                    t.end("LoadThreadedRunner");
+
+                    a.printSelectCount("Addresses");
+                        //a.printStep("DeleteThreadedRunner");
                     // 1. DELETE
                     runAndWait(threads, a, DeleteThreadedRunner.class);
 
+                    t.end("DeleteThreadedRunner");
+
                     // 2. OPTIMIZE - Collapse
                     a.doOptimize();
-                    Application.wait(1000);
+                    //Application.wait(1000);
+
+                    t.end("doOptimize");
 
                     // 3. INSERT again
+                    //a.printStep("LoadThreadedRunner");
                     runAndWait(threads, a, LoadThreadedRunner.class);
+                    a.printSelectCount("Addresses");
+
+                    t.end("LoadThreadedRunner");
 
                     }
                 else{
@@ -90,7 +113,9 @@ public class Addresses extends ClickHouseTable{
         System.out.println("=================================");
         System.out.println("ВСЕ ОТПРАВЛЕНО" + "\tThreads: " + threads + "\tDataSize:"+dataSize);
 
-        t.end();
+        tWhole.end("WHOLE WORK");
+        System.out.println("=================================");
+        System.out.println("");
 
     }
 
@@ -99,7 +124,7 @@ public class Addresses extends ClickHouseTable{
 
         CompletableFuture[] features1 = new CompletableFuture[nThreads];
         for(int i= 0; i < nThreads; i++) {
-            ThreadedRunner runner = createInstance(c, a, nThreads);
+            ThreadedRunner runner = createInstance(c, a, i);
             CompletableFuture fi =
                     CompletableFuture.runAsync( runner);
             features1[i] = fi;
@@ -126,15 +151,26 @@ public class Addresses extends ClickHouseTable{
      */
     void doOptimize( ) throws SQLException {
 
-        this.connection.createStatement().execute("OPTIMIZE TABLE " + "Addresses");
+        System.out.println("OPTIMIZE: " );
+        this.connection.createStatement().execute("OPTIMIZE TABLE " + "Addresses" + " final");
 
-        String SqlCount = "SELECT Count( * ) AS count from Addresses ";
+        printSelectCount("Addresses");
+    }
+
+    void printSelectCount(String tableName) throws SQLException {
+        String SqlCount = "SELECT Count( * ) AS count from " + tableName;
 
         ResultSet rs = ExecuteAndReturnResult( SqlCount );
         if(rs.next() == false)
             System.out.println("No Values from SQL:" + SqlCount);
         else
-            System.out.println("Count after OPTIMIZE: " + rs.getInt("count") );
+            System.out.println("------- Count(*) = " + rs.getInt("count") );
+
+    }
+    void printStep(String String) throws SQLException {
+
+            System.out.println("STEP:  " + String.toUpperCase() );
+
     }
 
 
@@ -350,8 +386,11 @@ public class Addresses extends ClickHouseTable{
 
                         Timer t = Timer.instance().start();
 
-                        for (int i = 0; i <= count; i++) {
-                            stream.writeInt64(i + threadNumber*count);
+
+                        for (int i = 0; i < count; i++) {
+                            long recordId =  i + (threadNumber)*(count+100);
+
+                            stream.writeInt64(recordId);
                             stream.writeString("Country_" + i);
                             stream.writeString("Region_" + i);
                             stream.writeString("District_" + i);
@@ -365,12 +404,12 @@ public class Addresses extends ClickHouseTable{
                             else
                                 stream.writeInt8(-1);
 
-                            if(i %1_000_000 == 0){
+                            if((i+1) %1_000_000 == 0){
                                 System.out.println("Added:" + i + " thread: " + Thread.currentThread().getName());
 
                                 System.out.println("threadNumber: " + threadNumber);
 
-                                long mSec = t.end();
+                                long mSec = t.end( );
                                 Meter.addTimerMeterValue("ClickHouse: Load 1_000_000 records", mSec);
                             }
                         }

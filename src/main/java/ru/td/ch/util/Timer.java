@@ -15,12 +15,23 @@ public class Timer{
     /**
      * @return   Milliseconds
      */
-    public  long end(){
+    public  long end(String msg){
         long time1 = System.nanoTime();
 
         Long mSec = (time1 - time0)/1_000_000;
         time0 = System.nanoTime();
-        System.out.println("Time= " + mSec/1_000 +"," + mSec % 1_000 +" seconds");
+        System.out.print("Time= " + mSec/1_000 +"," + mSec % 1_000 +" seconds" );
+
+        if(msg != null && msg.length() > 0 )
+            System.out.println(" OP:" + msg);
+        else
+            System.out.println("");
+
+
         return mSec;
+    }
+
+    public  long end() {
+        return end("");
     }
 }
