@@ -63,6 +63,8 @@ public class Addresses extends ClickHouseTable{
                 else
                 if( isUpdate == false  && isDelete == true) {
 
+                    //a.set_optimize_throw_if_noop();
+
                         //a.printStep("DeleteThreadedRunner");
                     runAndWait(threads, a, DeleteThreadedRunner.class);
 
@@ -157,6 +159,22 @@ public class Addresses extends ClickHouseTable{
         printSelectCount("Addresses");
     }
 
+    /**
+     *
+     * Work with error:   DB::Exception: There is no session
+     *
+     * So named this property in ClickHouse
+     * @throws SQLException
+     */
+    void set_optimize_throw_if_noop( ) throws SQLException {
+
+        System.out.println("optimize_throw_if_noop " );
+        this.connection.createStatement().execute("SET optimize_throw_if_noop = 1");
+
+    }
+
+
+
     void printSelectCount(String tableName) throws SQLException {
         String SqlCount = "SELECT Count( * ) AS count from " + tableName;
 
@@ -234,6 +252,54 @@ public class Addresses extends ClickHouseTable{
     }
 
 
+    static class Distributed{
+
+        public static  String SQLTableCreate = "    CREATE TABLE Addresses AS default.Addresses_local\n" +
+                "            ENGINE = Distributed(perftest_3shards_1replicas, default, Addresses_local, rand());";
+
+
+/*        local Table  to create DISTRIBUTED  table Addresses on cluster upon it
+CREATE TABLE default.Addresses_local (
+`ID` UInt64,
+ `Country` String,
+ `Region` String,
+ `District` String,
+ `Street` String,
+ `Building` String,
+ `Room` Int32,
+ `Sign` Int8
+) ENGINE = CollapsingMergeTree(Sign) ORDER BY ID SETTINGS index_granularity = 8192
+
+*/
+
+
+/*    CLUSTER CONFIG  for    /etc/clickhouse-server/config.xml
+<remote_servers>
+    <perftest_3shards_1replicas>
+        <shard>
+            <replica>
+                <host>10.135.156.210</host>
+                <port>9000</port>
+            </replica>
+        </shard>
+        <shard>
+            <replica>
+                <host>10.135.156.212</host>
+                <port>9000</port>
+            </replica>
+        </shard>
+        <shard>
+            <replica>
+                <host>10.135.156.215</host>
+                <port>9000</port>
+            </replica>
+        </shard>
+    </perftest_3shards_1replicas>
+</remote_servers>
+
+*/
+
+    }
 
     static class TinyLog{
         public static  String SQLTableCreate = "CREATE TABLE Addresses\n" +
@@ -325,7 +391,12 @@ public class Addresses extends ClickHouseTable{
         dropTable("Addresses");
 
         String engine  = CmdlArgs.instance.getEngine();
+        boolean distributed  = CmdlArgs.instance.isDistributed();
 
+        if(distributed){
+            SQLTableCreate = Distributed.SQLTableCreate;
+        }
+        else
         switch(engine.toLowerCase()){
             case "default"      : break;
             case "mergetree"    : SQLTableCreate = MergeTree.SQLTableCreate;    break;
