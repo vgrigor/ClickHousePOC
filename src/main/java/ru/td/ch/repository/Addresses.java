@@ -301,7 +301,23 @@ CREATE TABLE default.Addresses_local (
 
     }
 
-    static class TinyLog{
+    static class TableEngine{
+        static{
+            String codecArg = CmdlArgs.instance.getCodec();
+            if(codecArg != null && codecArg.length() > 0 )
+                codec = codecArg;
+        }
+        // 3X for String
+        //public static String codec = " Codec(Delta, ZSTD) ";
+        // 6X
+        //public static String codec = " Codec(ZSTD) ";
+
+        public static String codecUInt64 = " Codec(Delta, ZSTD) ";
+        public static String codec = " Codec(ZSTD(1)) ";
+
+    }
+
+    static class TinyLog extends TableEngine{
         public static  String SQLTableCreate = "CREATE TABLE Addresses\n" +
                 "(\n" +
                 "    ID UInt64,\n" +
@@ -334,16 +350,29 @@ CREATE TABLE default.Addresses_local (
     }
 
 
-    static class MergeTree{
+    static class MergeTree extends TableEngine{
+        static{
+            String codecArg = CmdlArgs.instance.getCodec();
+            if(codecArg != null && codecArg.length() > 0 )
+                codec = codecArg;
+        }
+        // 3X for String
+        //public static String codec = " Codec(Delta, ZSTD) ";
+        // 6X
+        //public static String codec = " Codec(ZSTD) ";
+
+        public static String codecUInt64 = " Codec(Delta, ZSTD) ";
+        public static String codec = " Codec(ZSTD(1)) ";
+
         public static String SQLTableCreate = "CREATE TABLE Addresses\n" +
                 "(\n" +
-                "    ID UInt64,\n" +
-                "    Country String,\n" +
-                "    Region String,\n" +
-                "    District String,\n" +
-                "    Street String,\n" +
-                "    Building String,\n" +
-                "    Room Int32,\n" +
+                "    ID UInt64"         + codecUInt64  +",\n" +
+                "    Country String"    + codec  +",\n" +
+                "    Region String"     + codec  +",\n" +
+                "    District String"   + codec  +",\n" +
+                "    Street String"     + codec  +",\n" +
+                "    Building String"   + codec  +",\n" +
+                "    Room Int32"        + codec  +",\n" +
                 "    \n" +
                 "    Sign Int8\n" +
                 ")\n" +

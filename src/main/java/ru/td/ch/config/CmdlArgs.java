@@ -67,6 +67,28 @@ public class CmdlArgs {
             help = true)
     private boolean delete = false;//"Addresses";
 
+    @Parameter(names = {"-dt", "--distributed"},
+            description = "create distibuted table Addreses, from already locally manually created Addreses_local",
+            required = false,
+            help = true)
+    private boolean distributed = false;
+
+
+    public String getCodec() {
+        return codec;
+    }
+
+    @Parameter(names = {"-cd", "--codec"},
+            description = "String compression codec:  ZSTD, LZ4 ...",
+            required = false,
+            help = true)
+    private String codec = "";
+
+
+
+
+
+
 
 
     public static CmdlArgs setup(String[] args) {
@@ -129,5 +151,9 @@ public class CmdlArgs {
 
     public boolean isDelete() {
         return delete;
+    }
+
+    public boolean isDistributed() {
+        return distributed;
     }
 }
