@@ -255,7 +255,36 @@ public class Addresses extends ClickHouseTable{
     static class Distributed{
 
         public static  String SQLTableCreate = "    CREATE TABLE Addresses AS default.Addresses_local\n" +
-                "            ENGINE = Distributed(perftest_3shards_1replicas, default, Addresses_local, rand());";
+                "            ENGINE = Distributed(perftest_3shards_1replicas, default, Addresses_local, rand())";
+
+
+        public static String codecUInt64 = " Codec(Delta, ZSTD) ";
+        public static String codec = " Codec(ZSTD(1)) ";
+
+        static{
+            String codecArg = CmdlArgs.instance.getCodec();
+            if(codecArg != null && codecArg.length() > 0 )
+                codec = " Codec(" + codecArg + ") ";
+            else    //default
+                codec = "";
+        }
+
+
+        public static String SQLTableCreate_local = "CREATE TABLE Addresses_local\n" +
+                "(\n" +
+                "    ID UInt64"         + codecUInt64  +",\n" +
+                "    Country String"    + codec  +",\n" +
+                "    Region String"     + codec  +",\n" +
+                "    District String"   + codec  +",\n" +
+                "    Street String"     + codec  +",\n" +
+                "    Building String"   + codec  +",\n" +
+                "    Room Int32"        + codec  +",\n" +
+                "    \n" +
+                "    Sign Int8\n" +
+                ")\n" +
+                "ENGINE = CollapsingMergeTree(Sign)\n" +
+                "ORDER BY ID;";
+
 
 
 /*        local Table  to create DISTRIBUTED  table Addresses on cluster upon it
@@ -351,11 +380,6 @@ CREATE TABLE default.Addresses_local (
 
 
     static class MergeTree extends TableEngine{
-        static{
-            String codecArg = CmdlArgs.instance.getCodec();
-            if(codecArg != null && codecArg.length() > 0 )
-                codec = codecArg;
-        }
         // 3X for String
         //public static String codec = " Codec(Delta, ZSTD) ";
         // 6X
@@ -363,6 +387,15 @@ CREATE TABLE default.Addresses_local (
 
         public static String codecUInt64 = " Codec(Delta, ZSTD) ";
         public static String codec = " Codec(ZSTD(1)) ";
+
+        static{
+            String codecArg = CmdlArgs.instance.getCodec();
+            if(codecArg != null && codecArg.length() > 0 )
+                codec = " Codec(" + codecArg + ") ";
+            else    //default
+                codec = "";
+        }
+
 
         public static String SQLTableCreate = "CREATE TABLE Addresses\n" +
                 "(\n" +
@@ -424,17 +457,47 @@ CREATE TABLE default.Addresses_local (
 
         if(distributed){
             SQLTableCreate = Distributed.SQLTableCreate;
-        }
-        else
-        switch(engine.toLowerCase()){
-            case "default"      : break;
-            case "mergetree"    : SQLTableCreate = MergeTree.SQLTableCreate;    break;
-            case "memory"       : SQLTableCreate = Memory.SQLTableCreate;       break;
-            case "tinylog"      : SQLTableCreate = TinyLog.SQLTableCreate;      break;
-            case "stripedlog"   : SQLTableCreate = StripedLog.SQLTableCreate;   break;
-        }
 
-        executeSQL(SQLTableCreate);
+            dropTable("Addresses_local");
+            executeSQL(Distributed.SQLTableCreate_local);
+
+            reInitConnection("10.135.156.212");
+                dropTable("Addresses");
+                dropTable("Addresses_local");
+                executeSQL(Distributed.SQLTableCreate_local);
+                executeSQL(Distributed.SQLTableCreate);
+
+            reInitConnection("10.135.156.215");
+                dropTable("Addresses");
+                dropTable("Addresses_local");
+                executeSQL(Distributed.SQLTableCreate_local);
+                executeSQL(Distributed.SQLTableCreate);
+
+                reInitConnection("10.135.156.210");
+
+            executeSQL(Distributed.SQLTableCreate);
+
+        }
+        else {
+            switch (engine.toLowerCase()) {
+                case "default":
+                    break;
+                case "mergetree":
+                    SQLTableCreate = MergeTree.SQLTableCreate;
+                    break;
+                case "memory":
+                    SQLTableCreate = Memory.SQLTableCreate;
+                    break;
+                case "tinylog":
+                    SQLTableCreate = TinyLog.SQLTableCreate;
+                    break;
+                case "stripedlog":
+                    SQLTableCreate = StripedLog.SQLTableCreate;
+                    break;
+            }
+
+            executeSQL(SQLTableCreate);
+        }
     }
 
     void  DropTable() throws SQLException {

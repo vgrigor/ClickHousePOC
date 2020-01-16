@@ -18,6 +18,14 @@ public class ClickHouseTable {
     ClickHouseDataSource dataSource = new ClickHouseDataSource( jdbcURL);
     protected ClickHouseConnection connection;
 
+    public void reInitConnection(String Ip) throws SQLException {
+        jdbcURL = "jdbc:clickhouse://" + Ip +":8123";
+
+        dataSource = new ClickHouseDataSource( jdbcURL);
+        connection= GetConnection();
+        System.out.println(">>>>>>>>>>>>> Connected to IP:  " + Ip);
+    }
+
     static public String getIP()  {
         InetAddress inetAddress = null;
         String IP = CmdlArgs.instance.getIP();
@@ -41,6 +49,8 @@ public class ClickHouseTable {
     protected void dropTable(String TableName) throws SQLException {
 
         GetConnection().createStatement().execute("DROP TABLE IF EXISTS " + TableName);
+
+        System.out.println("Dropped table " + TableName );
     }
 
     protected ClickHouseConnectionImpl GetConnection() throws SQLException{
