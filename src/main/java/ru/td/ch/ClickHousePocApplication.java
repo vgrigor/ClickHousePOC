@@ -14,6 +14,7 @@ import ru.td.ch.metering.Meter;
 import ru.td.ch.repository.Addresses;
 import ru.td.ch.repository.AddressesFK;
 import ru.td.ch.repository.dictionary.AddressRegion;
+import ru.td.ch.repository.fssp.ExecCase;
 import ru.td.ch.util.Application;
 
 import javax.annotation.PostConstruct;
@@ -41,6 +42,7 @@ public class ClickHousePocApplication {
 
 
 	switch (CmdlArgs.instance.getTable()){
+		case "ExecCase"		:	ExecCase.doLoadData();  	break;
 		case "AddressRegion":	AddressRegion.doLoadData();  break;
 		case "Addresses"	:	Addresses.doLoadData();  	break;
 		case "AddressesFK"	:	AddressesFK.doLoadData();  	break;

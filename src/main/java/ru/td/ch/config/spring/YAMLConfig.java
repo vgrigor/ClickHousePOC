@@ -30,12 +30,12 @@ public class YAMLConfig {
     // standard getters and setters
     public void run(YAMLConfig myConfig) throws Exception {
 
-        System.out.println("cardinality: " + myConfig.getCardinality());
+/*        System.out.println("cardinality: " + myConfig.getCardinality());
         System.out.println("using environment: " + myConfig.getSize());
 
         System.out.println("using environment: " + myConfig.getEnvironment());
         System.out.println("name: " + myConfig.getName());
-        System.out.println("servers: " + myConfig.getServers());
+        System.out.println("servers: " + myConfig.getServers());*/
     }
 
 }
