@@ -2,25 +2,22 @@ package ru.td.ch.repository.fssp;
 
 import ru.td.ch.config.CmdlArgs;
 import ru.td.ch.metering.Meter;
-import ru.td.ch.repository.ClickHouseTable;
-import ru.td.ch.util.Application;
+import ru.td.ch.repository.ClickHouseTableNative;
 import ru.td.ch.util.Timer;
-import ru.yandex.clickhouse.util.ClickHouseRowBinaryStream;
-import ru.yandex.clickhouse.util.ClickHouseStreamCallback;
 
-import java.io.IOException;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
 
-public class ExecCase extends ClickHouseTable {
+public class ExecCaseNative extends /*ClickHouseTable*/ ClickHouseTableNative {
 
     static boolean isUpdate = false;
     static boolean isDelete = false;
 
-    public ExecCase setUp() throws SQLException {
+    public ExecCaseNative setUp() throws SQLException {
 
         connection = GetConnection();
 
@@ -324,6 +321,14 @@ public class ExecCase extends ClickHouseTable {
         return result;
     }
 
+    static String generateArgsClause(ArrayList<Field> fields){
+        String result= "";
+        for(Field field : fields){
+            result += " ?" + ", ";
+        }
+        return result;
+    }
+
 
     static class Distributed{
 
@@ -411,7 +416,7 @@ CREATE TABLE default.ExecCase_local (
         //public static String codec = " Codec(ZSTD) ";
 
         public static String codecUInt64 = " Codec(Delta, ZSTD) ";
-        public static String codec = codecUInt64;//" Codec(ZSTD(1)) ";
+        public static String codec = " Codec(ZSTD(1)) ";
 
     }
 
@@ -582,7 +587,134 @@ CREATE TABLE default.ExecCase_local (
         GenerateLoadStream(lines, threadNumber, ExecCase.isDelete, ExecCase.isUpdate);
     }
 
+
     public void  GenerateLoadStream(long lines, int threadNumber, boolean isDelete, boolean isUpdate) throws SQLException {
+
+        final long count = lines;
+
+
+        PreparedStatement preparedStatement = GetConnection()//connection
+                .prepareStatement("INSERT INTO ExecCase VALUES(?, "+generateArgsClause(fields)+"?)");
+
+        Timer t = Timer.instance().start();
+        for (int i = 0; i < count; i++) {
+
+            long recordId =  i + (threadNumber)*(count+100);
+            preparedStatement.setLong(1, recordId);
+/*            preparedStatement.setString(2, "Zhang San" + i);
+            preparedStatement.setString(3, "张三" + i);*/
+
+            int j = 2;
+            for(;j <=(1+ fields.size());j++) {
+                Field field = fields.get(j-2);
+                if (field.cardinality != 0) {
+                    switch (field.type) {
+                        case Int32:
+                            preparedStatement.setInt(j, i % field.cardinality); break;
+                        case Int64:
+                            preparedStatement.setLong(j, i % field.cardinality); break;
+                        case String:
+                            preparedStatement.setString(j, "" + i % field.cardinality); break;
+                    }
+                } else {
+                    switch (field.type) {
+                        case Int32:
+                            preparedStatement.setInt(j, i ); break;
+                        case Int64:
+                            preparedStatement.setLong(j, i ); break;
+                        case String:
+                            preparedStatement.setString(j, ""+i ); break;
+
+                    }
+                }
+            }
+
+            if(isDelete == false)
+                preparedStatement.setByte(j, Byte.valueOf("1")  );
+            else
+                preparedStatement.setByte(j, Byte.valueOf("-1")  );
+
+            preparedStatement.addBatch();
+
+            if((i+1) %1_000_000 == 0 /*|| i== count-1*/) {
+                //preparedStatement.get
+                preparedStatement.executeBatch();
+            }
+
+            if((i+1) %1_000_000 == 0){
+                System.out.println("Added:" + i + " thread: " + Thread.currentThread().getName());
+
+                System.out.println("threadNumber: " + threadNumber);
+
+                long mSec = t.end( );
+                Meter.addTimerMeterValue("ClickHouse: Load 1_000_000 records", mSec);
+            }
+        }
+
+
+/*        connection.createStatement().sendRowBinaryStream(
+                "INSERT INTO ExecCase (ID,"+generateInsertClause(fields)+"Sign)",
+                //"INSERT INTO ExecCase (ID,Country,Region,District,Street,Building,Room,Sign)",
+                new ClickHouseStreamCallback() {
+                    @Override
+                    public void writeTo(ClickHouseRowBinaryStream stream) throws IOException {
+
+                        Timer t = Timer.instance().start();
+
+
+                        for (int i = 0; i < count; i++) {
+                            long recordId =  i + (threadNumber)*(count+100);
+
+                            stream.writeInt64(recordId);
+
+                            for(Field field: fields) {
+                                if (field.cardinality != 0) {
+                                    switch (field.type) {
+                                        case Int32:
+                                            stream.writeInt32(i % field.cardinality); break;
+                                        case Int64:
+                                            stream.writeInt64(i % field.cardinality); break;
+                                        case String:
+                                            stream.writeString("" + i % field.cardinality); break;
+                                    }
+                                } else {
+                                    switch (field.type) {
+                                        case Int32:
+                                            stream.writeInt32(i); break;
+                                        case Int64:
+                                            stream.writeInt64(i); break;
+                                        case String:
+                                            stream.writeString("" + i); break;
+
+                                    }
+                                }
+                            }
+
+
+
+                            if(isDelete == false)
+                                stream.writeInt8(1);
+                            else
+                                stream.writeInt8(-1);
+
+                            if((i+1) %1_000_000 == 0){
+                                System.out.println("Added:" + i + " thread: " + Thread.currentThread().getName());
+
+                                System.out.println("threadNumber: " + threadNumber);
+
+                                long mSec = t.end( );
+                                Meter.addTimerMeterValue("ClickHouse: Load 1_000_000 records", mSec);
+                            }
+                        }
+                    }
+                }
+
+        );*/
+
+    }
+
+
+/*    public void  GenerateLoadStream(long lines, int threadNumber, boolean isDelete, boolean isUpdate) throws SQLException {
 
         final long count = lines;
 
@@ -624,16 +756,6 @@ CREATE TABLE default.ExecCase_local (
                                 }
                             }
 
-/*
-                            stream.writeString("Country_" + i);
-                            stream.writeString("Region_" + i);
-                            stream.writeString("District_" + i);
-                            stream.writeString("Street_" + i);
-                            stream.writeString("Room_" + i);
-
-                            stream.writeInt32(i % 10);
-*/
-
 
 
                             if(isDelete == false)
@@ -655,7 +777,7 @@ CREATE TABLE default.ExecCase_local (
 
         );
 
-    }
+    }*/
 
 
 }
